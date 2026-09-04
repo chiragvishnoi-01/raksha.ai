@@ -81,7 +81,7 @@ class VehicleTracker:
                     persist=True,
                     tracker="bytetrack.yaml",
                     verbose=False,
-                    conf=settings.AI_CONFIDENCE_THRESHOLD
+                    conf=(0.22 if settings.DEMO_MODE else settings.AI_CONFIDENCE_THRESHOLD)
                 )
                 
                 if results and len(results) > 0:

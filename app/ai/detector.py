@@ -65,7 +65,7 @@ class VehicleDetector:
         """Performs vehicle detection on a single frame.
         Returns list of detections with bounding box and class labels.
         """
-        conf_thr = conf_threshold or settings.AI_CONFIDENCE_THRESHOLD
+        conf_thr = conf_threshold or (0.22 if settings.DEMO_MODE else settings.AI_CONFIDENCE_THRESHOLD)
         detections = []
 
         if self._is_loaded and self.model is not None:

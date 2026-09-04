@@ -402,6 +402,8 @@ async def detect_frame_http(request: Request):
         ).start()
 
     telemetry_state["active_vehicles"] = len(tracks)
+    telemetry_state["camera_source"] = "BROWSER WEBCAM"
+    telemetry_state["camera_online"] = True
     telemetry_state["is_synthetic"] = False
     annotated = draw_hud_overlays(frame, tracks, telemetry_state["active_collision"])
     ret, buffer = cv2.imencode(".jpg", annotated, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
