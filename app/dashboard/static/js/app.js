@@ -309,28 +309,58 @@ function updateCameraStatus(message, type = 'info') {
     }
 }
 
-async function startLiveCamera() {
-    const btnStart = document.getElementById('btn-start-camera');
-    const btnStop = document.getElementById('btn-stop-camera');
-    const sourceTag = document.getElementById('cam-feed-source');
+// ==========================================
+// RAKSHA AI — Autonomous Live Camera Controller
+// ==========================================
+
+const CAMERA_CONFIG = {
+    width: 640,
+    height: 360,
+    targetFps: 12,
+    jpegQuality: 0.65
+};
+
+let isLiveWebcamActive = false;
+let webcamMediaStream = null;
+let webcamWs = null;
+let isAwaitingFrameResponse = false;
+let streamIntervalId = null;
+let lastFrameSendTime = 0;
+
+function updateCameraStatus(message, type = 'info') {
+    const statusBox = document.getElementById('camera-status-msg');
+    if (!statusBox) return;
+
+    statusBox.textContent = message;
+    if (type === 'error') {
+        statusBox.style.color = '#ff6b6b';
+    } else if (type === 'success') {
+        statusBox.style.color = '#00ff88';
+    } else {
+        statusBox.style.color = '#cbd5e1';
+    }
+}
+
+// Automatic Camera Startup — Starts immediately on page load without any manual button click
+async function autoStartCamera() {
     const video = document.getElementById('client-webcam-video');
+    const streamImg = document.getElementById('live-stream-img');
+    const sourceTag = document.getElementById('cam-feed-source');
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        updateCameraStatus("Your browser does not support webcam access. Please use the latest Chrome or Edge.", "error");
+        updateCameraStatus("Webcam API not supported by browser. Showing highway simulation feed.", "info");
+        if (streamImg) streamImg.style.display = 'block';
         return;
     }
 
-    if (btnStart) {
-        btnStart.disabled = true;
-        btnStart.textContent = '⏳ REQUESTING PERMISSION...';
-    }
-    updateCameraStatus("Requesting camera permission from browser...", "info");
+    updateCameraStatus("Connecting to camera...", "info");
 
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
             video: {
                 width: { ideal: CAMERA_CONFIG.width },
-                height: { ideal: CAMERA_CONFIG.height }
+                height: { ideal: CAMERA_CONFIG.height },
+                facingMode: "user"
             },
             audio: false
         });
@@ -341,51 +371,38 @@ async function startLiveCamera() {
 
         isLiveWebcamActive = true;
 
-        // Immediately show live webcam video on screen so user never sees black box
-        const streamImg = document.getElementById('live-stream-img');
+        // Show live camera immediately on screen (NO black screen)
         video.style.display = 'block';
         if (streamImg) streamImg.style.display = 'none';
 
-        if (btnStart) {
-            btnStart.textContent = '📹 CAMERA ACTIVE';
-            btnStart.disabled = true;
-            btnStart.style.opacity = '0.6';
-        }
-        if (btnStop) {
-            btnStop.disabled = false;
-            btnStop.style.opacity = '1.0';
-            btnStop.style.background = 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)';
-            btnStop.style.color = '#fff';
-            btnStop.style.boxShadow = '0 0 15px rgba(255, 65, 108, 0.4)';
-        }
         if (sourceTag) {
-            sourceTag.textContent = 'BROWSER WEBCAM';
+            sourceTag.textContent = 'AUTOMATIC LIVE WEBCAM';
         }
 
-        updateCameraStatus("🟢 Browser Camera ACTIVE — Streaming live to YOLOv8 & ByteTrack.", "success");
+        updateCameraStatus("🟢 AUTONOMOUS SURVEILLANCE ACTIVE: Camera online, scanning for vehicles & collisions.", "success");
         initWebcamWebSocket();
 
     } catch (err) {
-        console.error('Camera access error:', err);
+        console.warn('Camera startup:', err);
         isLiveWebcamActive = false;
 
-        if (btnStart) {
-            btnStart.disabled = false;
-            btnStart.textContent = '📹 START CAMERA';
-            btnStart.style.opacity = '1.0';
-        }
-        if (btnStop) {
-            btnStop.disabled = true;
-            btnStop.style.opacity = '0.5';
+        // If browser requires user interaction first to allow camera
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            updateCameraStatus("🔒 Camera permission needed: Click anywhere on video to activate camera.", "info");
+            const wrapper = document.querySelector('.video-wrapper');
+            if (wrapper) {
+                wrapper.style.cursor = 'pointer';
+                wrapper.onclick = () => {
+                    wrapper.onclick = null;
+                    wrapper.style.cursor = 'default';
+                    autoStartCamera();
+                };
+            }
+        } else {
+            updateCameraStatus(`Camera: ${err.message}. Monitoring active.`, "info");
         }
 
-        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-            updateCameraStatus("Camera permission denied. Please allow camera access in your browser settings.", "error");
-        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError' || err.name === 'NotReadableError') {
-            updateCameraStatus("No camera detected or camera is already in use.", "error");
-        } else {
-            updateCameraStatus(`Camera error: ${err.message}. Please verify webcam connection.`, "error");
-        }
+        if (streamImg) streamImg.style.display = 'block';
     }
 }
 
@@ -402,7 +419,7 @@ function initWebcamWebSocket() {
     webcamWs.binaryType = 'arraybuffer';
 
     webcamWs.onopen = () => {
-        console.log('Live webcam WebSocket connected to RAKSHA AI.');
+        console.log('Autonomous WebSocket connected to RAKSHA AI.');
         isAwaitingFrameResponse = false;
         startFrameCaptureLoop();
     };
@@ -413,6 +430,7 @@ function initWebcamWebSocket() {
         const imgUrl = URL.createObjectURL(blob);
         const streamImg = document.getElementById('live-stream-img');
         const video = document.getElementById('client-webcam-video');
+
         if (streamImg && isLiveWebcamActive) {
             streamImg.src = imgUrl;
             streamImg.style.display = 'block';
@@ -434,15 +452,12 @@ function initWebcamWebSocket() {
             if (video) video.style.display = 'block';
             if (streamImg) streamImg.style.display = 'none';
 
-            updateCameraStatus("AI connection lost. Reconnecting...", "error");
             setTimeout(() => {
                 if (isLiveWebcamActive) initWebcamWebSocket();
             }, 2000);
         }
     };
 }
-
-let lastFrameSendTime = 0;
 
 function startFrameCaptureLoop() {
     if (streamIntervalId) clearInterval(streamIntervalId);
@@ -486,75 +501,11 @@ function startFrameCaptureLoop() {
     }, intervalMs);
 }
 
-function stopLiveCamera() {
-    isLiveWebcamActive = false;
-    isAwaitingFrameResponse = false;
-
-    if (streamIntervalId) {
-        clearInterval(streamIntervalId);
-        streamIntervalId = null;
-    }
-
-    if (webcamMediaStream) {
-        webcamMediaStream.getTracks().forEach(track => track.stop());
-        webcamMediaStream = null;
-    }
-
-    if (webcamWs) {
-        try { webcamWs.close(); } catch(e) {}
-        webcamWs = null;
-    }
-
-    const btnStart = document.getElementById('btn-start-camera');
-    const btnStop = document.getElementById('btn-stop-camera');
-    const sourceTag = document.getElementById('cam-feed-source');
-    const streamImg = document.getElementById('live-stream-img');
-
-    if (btnStart) {
-        btnStart.textContent = '📹 START CAMERA';
-        btnStart.disabled = false;
-        btnStart.style.opacity = '1.0';
-    }
-    if (btnStop) {
-        btnStop.disabled = true;
-        btnStop.style.opacity = '0.5';
-        btnStop.style.background = '';
-        btnStop.style.color = '';
-        btnStop.style.boxShadow = '';
-    }
-    if (sourceTag) {
-        sourceTag.textContent = 'SIMULATION';
-    }
-
-    updateCameraStatus("Camera stopped. Switched back to simulation stream.", "info");
-
-    const video = document.getElementById('client-webcam-video');
-    if (video) video.style.display = 'none';
-    if (streamImg) {
-        streamImg.style.display = 'block';
-        streamImg.src = `/api/stream?t=${Date.now()}`;
-    }
-}
-
-async function useSimulationFeed() {
-    if (isLiveWebcamActive) {
-        stopLiveCamera();
-    }
-    try {
-        await fetch('/api/toggle-camera', { method: 'POST' });
-        const streamImg = document.getElementById('live-stream-img');
-        if (streamImg) {
-            streamImg.src = `/api/stream?t=${Date.now()}`;
-        }
-        updateCameraStatus("Switched to simulated highway traffic feed.", "info");
-        pollTelemetry();
-    } catch (e) {
-        console.error('Error switching to simulation feed:', e);
-    }
-}
-
-// Initialize Polling
+// Initialize Polling & Autonomous Camera on Page Load
 window.addEventListener('DOMContentLoaded', () => {
     fetchIncidents();
     setInterval(pollTelemetry, 800);
+
+    // Automatically trigger live camera and AI monitoring without requiring any button clicks!
+    autoStartCamera();
 });

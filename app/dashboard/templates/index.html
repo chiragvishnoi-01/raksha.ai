@@ -152,10 +152,10 @@
                 </div>
 
                 <div class="video-wrapper">
-                    <!-- Client-side Live Webcam Element (shows instantly when camera starts) -->
-                    <video id="client-webcam-video" autoplay playsinline muted style="display: none; width: 100%; height: 100%; object-fit: cover;"></video>
+                    <!-- Client-side Live Webcam Element (shows instantly on page load) -->
+                    <video id="client-webcam-video" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; display: block;"></video>
                     <!-- Server Stream / AI Annotated Feed Element -->
-                    <img id="live-stream-img" src="/api/stream" alt="Live Camera Feed with YOLO Telemetry" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                    <img id="live-stream-img" src="/api/stream" alt="Live Camera Feed with YOLO Telemetry" style="width: 100%; height: 100%; object-fit: cover; display: none;">
                     <!-- Offscreen Canvas for Frame Extraction -->
                     <canvas id="client-webcam-canvas" width="640" height="360" style="position: absolute; left: -9999px; top: -9999px;"></canvas>
 
@@ -167,7 +167,7 @@
                         </div>
                         <div class="hud-corner top-right">
                             <span class="metric-tag" style="background: rgba(0,242,254,0.15); color: #00f2fe; border: 1px solid rgba(0,242,254,0.4); margin-bottom: 4px; display: inline-block;">
-                                Camera Source: <strong id="cam-feed-source">SIMULATION</strong>
+                                Camera Source: <strong id="cam-feed-source">AUTOMATIC LIVE WEBCAM</strong>
                             </span>
                             <span id="collision-hud-status" class="hud-status-badge">STATUS: NORMAL</span>
                         </div>
@@ -177,26 +177,17 @@
                     </div>
                 </div>
 
-                <div class="video-controls-bar">
-                    <div class="control-buttons">
-                        <button id="btn-start-camera" class="btn btn-primary" onclick="startLiveCamera()" style="font-weight: 700; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); color: #000; box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);">
-                            📹 START CAMERA
-                        </button>
-                        <button id="btn-stop-camera" class="btn btn-secondary" onclick="stopLiveCamera()" style="font-weight: 600; opacity: 0.5;" disabled>
-                            🛑 STOP CAMERA
-                        </button>
-                        <button class="btn btn-secondary" onclick="useSimulationFeed()">
-                            🤖 SIMULATION FEED
-                        </button>
-                        <button class="btn btn-warning" onclick="triggerSimulatedCollision()">
-                            💥 Trigger Simulated Collision
-                        </button>
-                        <button class="btn btn-secondary" onclick="resetAlertState()">
-                            ✓ Reset Alert Status
-                        </button>
+                <div class="video-controls-bar" style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: rgba(15, 23, 42, 0.6); border-top: 1px solid var(--border-subtle); border-radius: 0 0 var(--radius-md) var(--radius-md);">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="live-dot pulse-anim" style="background: #00ff88;"></span>
+                        <span id="camera-status-msg" style="font-size: 0.88rem; color: #cbd5e1;">
+                            🟢 <strong>AUTONOMOUS SURVEILLANCE ACTIVE:</strong> Camera automatically starts and continuously monitors vehicles for collisions.
+                        </span>
                     </div>
-                    <div id="camera-status-msg" class="control-note" style="margin-top: 10px; padding: 10px 14px; border-radius: 6px; font-size: 0.88rem; background: rgba(0, 242, 254, 0.08); border: 1px solid rgba(0, 242, 254, 0.25); color: #cbd5e1;">
-                        💡 Click <strong>"START CAMERA"</strong> to activate your laptop/device webcam for real-time live YOLO detection!
+                    <div>
+                        <button class="btn btn-secondary btn-sm" onclick="resetAlertState()" style="font-size: 0.8rem; padding: 6px 14px; font-weight: 600;">
+                            🛡️ Reset Alert Status
+                        </button>
                     </div>
                 </div>
             </section>
