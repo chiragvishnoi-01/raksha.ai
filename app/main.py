@@ -235,33 +235,36 @@ def generate_video_stream() -> Generator[bytes, None, None]:
     while True:
         frame = camera_stream.get_frame()
         if frame is None:
-            time.sleep(0.02)
+            time.sleep(0.04)
             continue
 
-        # Run ByteTrack Tracking & Detection
-        tracks = tracker.track(frame)
-        
-        # Check Collisions
-        incident = collision_detector.check_collisions(tracks, frame)
-        if incident:
-            telemetry_state["active_collision"] = True
-            telemetry_state["last_incident"] = incident
-            # Process alert and PDF in a background thread (non-blocking for video stream)
-            threading.Thread(
-                target=process_accident_incident,
-                args=(incident,),
-                daemon=True,
-                name=f"incident-{incident['incident_id']}"
-            ).start()
+        if not camera_stream.is_synthetic:
+            # Run ByteTrack Tracking & Detection on real camera frames
+            tracks = tracker.track(frame)
+            
+            # Check Collisions
+            incident = collision_detector.check_collisions(tracks, frame)
+            if incident:
+                telemetry_state["active_collision"] = True
+                telemetry_state["last_incident"] = incident
+                threading.Thread(
+                    target=process_accident_incident,
+                    args=(incident,),
+                    daemon=True,
+                    name=f"incident-{incident['incident_id']}"
+                ).start()
 
-        # Update telemetry
-        telemetry_state["fps"] = camera_stream.fps or 30.0
-        telemetry_state["active_vehicles"] = len(tracks)
-        telemetry_state["is_synthetic"] = camera_stream.is_synthetic
-
-        # Render HUD annotations
-        is_colliding = telemetry_state["active_collision"]
-        annotated_frame = draw_hud_overlays(frame, tracks, is_colliding)
+            telemetry_state["fps"] = camera_stream.fps or 30.0
+            telemetry_state["active_vehicles"] = len(tracks)
+            telemetry_state["is_synthetic"] = False
+            is_colliding = telemetry_state["active_collision"]
+            annotated_frame = draw_hud_overlays(frame, tracks, is_colliding)
+        else:
+            # Synthetic simulation mode: serve lightweight simulated road frames without pegging CPU
+            telemetry_state["fps"] = camera_stream.fps or 30.0
+            telemetry_state["active_vehicles"] = 2
+            telemetry_state["is_synthetic"] = True
+            annotated_frame = frame
 
         # Encode JPEG
         ret, buffer = cv2.imencode(".jpg", annotated_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
