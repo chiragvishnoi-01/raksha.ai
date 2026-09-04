@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAKSHA AI — Intelligent Road Accident Detection & Response System</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- Background grid decoration -->
+    <div class="hud-bg-grid"></div>
+
+    <!-- Alert Modal (Emergency Broadcast) -->
+    <div id="emergency-modal" class="modal-overlay hidden">
+        <div class="modal-card emergency-border">
+            <div class="modal-header">
+                <div class="emergency-badge pulse-anim">🚨 EMERGENCY COLLISION BROADCAST</div>
+                <button class="modal-close" onclick="closeEmergencyModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-banner">
+                    <h2 id="modal-incident-id">RAKSHA-2026-001</h2>
+                    <span id="modal-severity-badge" class="severity-pill pill-critical">CRITICAL</span>
+                </div>
+                <div class="modal-grid">
+                    <div class="modal-preview">
+                        <img id="modal-screenshot-img" src="" alt="Accident Snapshot">
+                    </div>
+                    <div class="modal-info">
+                        <div class="info-row">
+                            <span class="label">Location:</span>
+                            <span class="val" id="modal-location">Kanpur Highway, NH-27</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Vehicles Involved:</span>
+                            <span class="val" id="modal-vehicles">01, 02</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">AI Confidence:</span>
+                            <span class="val text-success" id="modal-confidence">94%</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Assigned Trauma Center:</span>
+                            <span class="val text-warning" id="modal-hospital">LLR / Hallet Emergency Trauma Unit</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Hospital Email Alert:</span>
+                            <span class="val text-success" id="modal-hospital-alert">SENT ✓</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">NHAI Highway Alert:</span>
+                            <span class="val text-success" id="modal-nhai-alert">SENT ✓</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <a id="modal-maps-link" href="#" target="_blank" class="btn btn-secondary">
+                    📍 Open Google Maps
+                </a>
+                <a id="modal-pdf-link" href="#" target="_blank" class="btn btn-primary">
+                    📄 Download Incident PDF Report
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screenshot Preview Modal -->
+    <div id="screenshot-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title" id="preview-modal-title">Accident Snapshot Evidence</div>
+                <button class="modal-close" onclick="closeScreenshotModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="text-align: center;">
+                <img id="preview-modal-img" src="" alt="Snapshot" style="max-width: 100%; border-radius: 8px; border: 1px solid var(--border);">
+            </div>
+        </div>
+    </div>
+
+    <header class="top-nav">
+        <div class="brand-group">
+            <div class="brand-logo-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <path d="m9 12 2 2 4-4"/>
+                </svg>
+            </div>
+            <div>
+                <h1 class="brand-title">RAKSHA <span class="accent-text">AI</span></h1>
+                <p class="brand-tagline">INTELLIGENT ROAD ACCIDENT DETECTION & RESPONSE PLATFORM</p>
+            </div>
+        </div>
+
+        <div class="header-status-strip">
+            <div class="status-pill">
+                <span class="indicator-dot online"></span>
+                <span class="pill-label">CAMERA:</span>
+                <span class="pill-value" id="camera-indicator">ONLINE</span>
+            </div>
+            <div class="status-pill">
+                <span class="indicator-dot online"></span>
+                <span class="pill-label">AI ENGINE:</span>
+                <span class="pill-value" id="ai-indicator">YOLOv8 + ByteTrack</span>
+            </div>
+            <div class="status-pill">
+                <span class="indicator-dot online"></span>
+                <span class="pill-label">DISPATCH:</span>
+                <span class="pill-value">READY</span>
+            </div>
+            <div class="clock-display" id="live-clock">--:--:--</div>
+        </div>
+    </header>
+
+    <main class="dashboard-container">
+        <!-- Live Accident Alert Banner -->
+        <div id="accident-alert-banner" class="alert-banner normal-state">
+            <div class="banner-content">
+                <div class="banner-icon-box" id="banner-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                </div>
+                <div class="banner-details">
+                    <div class="banner-headline" id="banner-title">HIGHWAY MONITORING — ALL SECTORS NORMAL</div>
+                    <div class="banner-sub" id="banner-subtitle">Real-time computer vision actively scanning for vehicular collisions and anomalous trajectories.</div>
+                </div>
+            </div>
+            <div class="banner-controls">
+                <button id="btn-mute-sound" class="btn-icon" title="Toggle Alert Siren" onclick="toggleAudioAlert()">
+                    🔊 Sound On
+                </button>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <!-- Left Column: Live Feed & Video HUD -->
+            <section class="card video-panel">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <span class="live-dot pulse-anim"></span>
+                        <h2 class="card-title">LIVE SURVEILLANCE & TELEMETRY STREAM</h2>
+                    </div>
+                    <div class="stream-metrics">
+                        <span class="metric-tag">FPS: <strong id="fps-counter">30.0</strong></span>
+                        <span class="metric-tag">TRACKED VEHICLES: <strong id="active-vehicles-count">0</strong></span>
+                    </div>
+                </div>
+
+                <div class="video-wrapper">
+                    <img id="live-stream-img" src="/api/stream" alt="Live Camera Feed with YOLO Telemetry">
+                    
+                    <!-- HUD Overlays -->
+                    <div class="video-hud-overlay">
+                        <div class="hud-corner top-left">
+                            <span>LOC: KANPUR CORRIDOR [NH-27]</span>
+                            <span>LAT: 26.4499° N | LON: 80.3319° E</span>
+                        </div>
+                        <div class="hud-corner top-right">
+                            <span id="collision-hud-status" class="hud-status-badge">STATUS: NORMAL</span>
+                        </div>
+                        <div class="hud-corner bottom-left">
+                            <span>SENSORS: WEBCAM + YOLOv8 + BYTETRACK</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="video-controls-bar">
+                    <div class="control-buttons">
+                        <button class="btn btn-warning" onclick="triggerSimulatedCollision()">
+                            💥 Trigger Simulated Collision
+                        </button>
+                        <button class="btn btn-secondary" onclick="toggleSyntheticCamera()">
+                            🔄 Switch Camera Mode
+                        </button>
+                        <button class="btn btn-secondary" onclick="resetAlertState()">
+                            ✓ Reset Alert Status
+                        </button>
+                    </div>
+                    <div class="control-note">
+                        <em>🟢 DEMO MODE ON: Bring any 2 objects (bottles, phones, cups) close together in front of webcam — collision auto-detects!</em>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Column: Location, Hospital & Telemetry Quickcards -->
+            <aside class="sidebar-column">
+                <!-- Location & GPS Card -->
+                <div class="card location-card">
+                    <div class="card-header">
+                        <h3 class="card-title">📍 MONITORED LOCATION</h3>
+                        <span class="badge-cyan">GPS LOCKED</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="location-name-box">
+                            <div class="loc-pin-icon">🏛️</div>
+                            <div>
+                                <h4 id="loc-name-text">NH-27 Highway Corridor</h4>
+                                <p class="subtext">Kanpur, Uttar Pradesh, India</p>
+                            </div>
+                        </div>
+                        <div class="coords-display">
+                            <div><span class="coord-label">LATITUDE</span><span class="coord-val" id="lat-val">26.4499° N</span></div>
+                            <div><span class="coord-label">LONGITUDE</span><span class="coord-val" id="lon-val">80.3319° E</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nearest Emergency Trauma Hospital Card -->
+                <div class="card hospital-card">
+                    <div class="card-header">
+                        <h3 class="card-title">🏥 PRIMARY TRAUMA CENTER</h3>
+                        <span class="badge-emerald">AUTOMATED DISPATCH</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="hospital-info-box">
+                            <h4 id="hosp-name">L.L.R. Hospital & Level-1 Trauma Centre</h4>
+                            <p class="subtext" id="hosp-address">Swaroop Nagar, Kanpur, Uttar Pradesh</p>
+                            
+                            <div class="hospital-stats-grid">
+                                <div class="stat-box">
+                                    <span class="stat-label">DISTANCE</span>
+                                    <span class="stat-num" id="hosp-dist">3.2 km</span>
+                                </div>
+                                <div class="stat-box">
+                                    <span class="stat-label">AMBULANCE ETA</span>
+                                    <span class="stat-num text-warning" id="hosp-eta">7 mins</span>
+                                </div>
+                                <div class="stat-box">
+                                    <span class="stat-label">EMERGENCY LINE</span>
+                                    <span class="stat-num" style="font-size: 11px;">+91-512-2535483</span>
+                                </div>
+                            </div>
+
+                            <a id="hosp-route-link" href="https://www.google.com/maps/search/?api=1&query=26.4789,80.3218" target="_blank" class="btn btn-secondary btn-full" style="margin-top: 12px;">
+                                🚑 View Emergency Ambulance Route in Google Maps
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Multi-Agency Alert Pipeline Status -->
+                <div class="card pipeline-card">
+                    <div class="card-header">
+                        <h3 class="card-title">📡 EMERGENCY DISPATCH CHANNELS</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="dispatch-channels-list">
+                            <div class="channel-item">
+                                <div class="channel-info">
+                                    <span class="channel-icon">🏥</span>
+                                    <div>
+                                        <div class="channel-title">Hospital Trauma Unit</div>
+                                        <div class="channel-desc">Automated Priority Email & Bed Reservation</div>
+                                    </div>
+                                </div>
+                                <span class="channel-status active">STANDBY</span>
+                            </div>
+                            <div class="channel-item">
+                                <div class="channel-info">
+                                    <span class="channel-icon">🛣️</span>
+                                    <div>
+                                        <div class="channel-title">NHAI Highway Control Room</div>
+                                        <div class="channel-desc">Patrol Dispatch & Electronic Signage</div>
+                                    </div>
+                                </div>
+                                <span class="channel-status active">STANDBY</span>
+                            </div>
+                            <div class="channel-item">
+                                <div class="channel-info">
+                                    <span class="channel-icon">📄</span>
+                                    <div>
+                                        <div class="channel-title">ReportLab PDF Generator</div>
+                                        <div class="channel-desc">Automated Forensic Accident Dossier</div>
+                                    </div>
+                                </div>
+                                <span class="channel-status active">READY</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Incident History Section -->
+        <section class="card incident-history-section">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <span class="icon">📋</span>
+                    <h2 class="card-title">INCIDENT LOG & FORENSIC DISPATCH ARCHIVE</h2>
+                </div>
+                <div class="history-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="fetchIncidents()">
+                        🔄 Refresh Log
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>INCIDENT ID</th>
+                            <th>TIMESTAMP</th>
+                            <th>LOCATION</th>
+                            <th>SEVERITY</th>
+                            <th>VEHICLES</th>
+                            <th>AI CONFIDENCE</th>
+                            <th>HOSPITAL ALERT</th>
+                            <th>NHAI ALERT</th>
+                            <th>FORENSIC DOSSIER</th>
+                        </tr>
+                    </thead>
+                    <tbody id="incidents-table-body">
+                        <tr>
+                            <td colspan="9" class="empty-state">
+                                No collisions recorded in current surveillance session.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Good Samaritan & Safety Ecosystem Footer Info -->
+        <footer class="legal-footer-card">
+            <div class="footer-col">
+                <h4>🛡️ Good Samaritan Legal Protection</h4>
+                <p>Protected under Section 134A of the Motor Vehicles Act (MoRTH Guidelines). Responders assisting accident victims are legally protected from civil or criminal liability.</p>
+            </div>
+            <div class="footer-col">
+                <h4>🚀 RAKSHA AI Ecosystem</h4>
+                <p>Designed for scalable integration with Highway CCTV cameras, Connected Dashcams, Traccar GPS, Toll VMS & Emergency Services (112 / 108).</p>
+            </div>
+        </footer>
+    </main>
+
+    <!-- Scripts -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.env
+.venv/
+env/
+venv/
+*.sqlite
+*.db
+
+# Models & Reports & Media
+models/*.pt
+models/*.onnx
+screenshots/*
+!screenshots/.gitkeep
+reports/*
+!reports/.gitkeep
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
