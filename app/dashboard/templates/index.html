@@ -154,8 +154,8 @@
                 <div class="video-wrapper">
                     <!-- Client-side Live Webcam Element (shows instantly on page load) -->
                     <video id="client-webcam-video" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; display: block;"></video>
-                    <!-- Server Stream / AI Annotated Feed Element -->
-                    <img id="live-stream-img" src="/api/stream" alt="Live Camera Feed with YOLO Telemetry" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                    <!-- Server Stream / AI Annotated Feed Element (overlays on top of video) -->
+                    <img id="live-stream-img" src="/api/stream" alt="Live Camera Feed with YOLO Telemetry" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: none; z-index: 2;">
                     <!-- Offscreen Canvas for Frame Extraction -->
                     <canvas id="client-webcam-canvas" width="640" height="360" style="position: absolute; left: -9999px; top: -9999px;"></canvas>
 

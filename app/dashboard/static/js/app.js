@@ -434,7 +434,6 @@ function initWebcamWebSocket() {
         if (streamImg && isLiveWebcamActive) {
             streamImg.src = imgUrl;
             streamImg.style.display = 'block';
-            if (video) video.style.display = 'none';
             setTimeout(() => URL.revokeObjectURL(imgUrl), 800);
         }
     };

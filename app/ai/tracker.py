@@ -87,19 +87,25 @@ class VehicleTracker:
                 if results and len(results) > 0:
                     r = results[0]
                     boxes = r.boxes
-                    if boxes is not None and boxes.id is not None:
+                    if boxes is not None and len(boxes) > 0:
                         active_ids = set()
-                        for box in boxes:
+                        for i, box in enumerate(boxes):
                             cls_id = int(box.cls[0].item())
                             conf = float(box.conf[0].item())
-                            track_id = int(box.id[0].item())
+                            
+                            # Use ByteTrack ID if available, otherwise fallback to object index + 1
+                            if box.id is not None:
+                                track_id = int(box.id[0].item())
+                            else:
+                                track_id = i + 1
+                                
                             active_ids.add(track_id)
                             
                             x1, y1, x2, y2 = box.xyxy[0].tolist()
                             box_coords = [int(x1), int(y1), int(x2), int(y2)]
                             
                             # Resolve class name dynamically from model names
-                            cls_name = "object"
+                            cls_name = "vehicle"
                             if hasattr(self.detector.model, "names") and cls_id in self.detector.model.names:
                                 cls_name = self.detector.model.names[cls_id]
                             elif cls_id in TARGET_CLASSES:
