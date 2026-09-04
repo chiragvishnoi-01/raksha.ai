@@ -154,6 +154,10 @@
                 <div class="video-wrapper">
                     <img id="live-stream-img" src="/api/stream" alt="Live Camera Feed with YOLO Telemetry">
                     
+                    <!-- Hidden elements for client-side webcam streaming -->
+                    <video id="client-webcam-video" autoplay playsinline muted style="display: none;"></video>
+                    <canvas id="client-webcam-canvas" width="640" height="480" style="display: none;"></canvas>
+
                     <!-- HUD Overlays -->
                     <div class="video-hud-overlay">
                         <div class="hud-corner top-left">
@@ -161,28 +165,32 @@
                             <span>LAT: 26.4499° N | LON: 80.3319° E</span>
                         </div>
                         <div class="hud-corner top-right">
+                            <span id="cam-feed-source" class="metric-tag" style="background: rgba(0,242,254,0.15); color: #00f2fe; border: 1px solid rgba(0,242,254,0.4); margin-bottom: 4px; display: inline-block;">FEED: SIMULATION</span>
                             <span id="collision-hud-status" class="hud-status-badge">STATUS: NORMAL</span>
                         </div>
                         <div class="hud-corner bottom-left">
-                            <span>SENSORS: WEBCAM + YOLOv8 + BYTETRACK</span>
+                            <span>SENSORS: CAMERA + YOLOv8 + BYTETRACK</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="video-controls-bar">
                     <div class="control-buttons">
+                        <button id="btn-webcam-toggle" class="btn btn-primary" onclick="toggleLiveWebcam()" style="font-weight: 700; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); color: #000; box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);">
+                            📹 Start Live Device Camera
+                        </button>
+                        <button class="btn btn-secondary" onclick="useSimulationFeed()">
+                            🤖 Simulation Feed
+                        </button>
                         <button class="btn btn-warning" onclick="triggerSimulatedCollision()">
                             💥 Trigger Simulated Collision
-                        </button>
-                        <button class="btn btn-secondary" onclick="toggleSyntheticCamera()">
-                            🔄 Switch Camera Mode
                         </button>
                         <button class="btn btn-secondary" onclick="resetAlertState()">
                             ✓ Reset Alert Status
                         </button>
                     </div>
-                    <div class="control-note">
-                        <em>🟢 DEMO MODE ON: Bring any 2 objects (bottles, phones, cups) close together in front of webcam — collision auto-detects!</em>
+                    <div id="webcam-status-note" class="control-note">
+                        <em>💡 Click <strong>"Start Live Device Camera"</strong> to activate your laptop/mobile webcam for real-time live YOLO detection!</em>
                     </div>
                 </div>
             </section>

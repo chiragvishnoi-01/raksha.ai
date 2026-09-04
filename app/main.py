@@ -7,12 +7,13 @@ import time
 import logging
 import math
 import threading
+import io
 import numpy as np
 from datetime import datetime
 from pathlib import Path
 from typing import Generator, Optional, Dict, Any, List
 
-from fastapi import FastAPI, Depends, Request, HTTPException, BackgroundTasks
+from fastapi import FastAPI, Depends, Request, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -289,6 +290,99 @@ def video_feed():
         generate_video_stream(),
         media_type="multipart/x-mixed-replace; boundary=frame"
     )
+
+@app.websocket("/ws/live-stream")
+async def websocket_live_stream(websocket: WebSocket):
+    """Real-time bi-directional WebSocket stream for browser live webcam ingestion and YOLO detection."""
+    await websocket.accept()
+    logger.info("Browser live camera connected via WebSocket.")
+    frame_counter = 0
+    fps_timer = time.time()
+    current_fps = 30.0
+
+    try:
+        while True:
+            data = await websocket.receive_bytes()
+            if not data:
+                continue
+
+            nparr = np.frombuffer(data, np.uint8)
+            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if frame is None:
+                continue
+
+            # Ingest frame into camera stream singleton
+            camera_stream.update_external_frame(frame)
+
+            # Run YOLO Tracking
+            tracks = tracker.track(frame)
+
+            # Check Collisions
+            incident = collision_detector.check_collisions(tracks, frame)
+            if incident:
+                telemetry_state["active_collision"] = True
+                telemetry_state["last_incident"] = incident
+                threading.Thread(
+                    target=process_accident_incident,
+                    args=(incident,),
+                    daemon=True,
+                    name=f"incident-{incident['incident_id']}"
+                ).start()
+
+            # FPS calculation
+            frame_counter += 1
+            now = time.time()
+            if now - fps_timer >= 1.0:
+                current_fps = round(frame_counter / (now - fps_timer), 1)
+                frame_counter = 0
+                fps_timer = now
+
+            telemetry_state["fps"] = current_fps or 15.0
+            telemetry_state["active_vehicles"] = len(tracks)
+            telemetry_state["is_synthetic"] = False
+
+            # Draw HUD overlays on live camera frame
+            annotated_frame = draw_hud_overlays(frame, tracks, telemetry_state["active_collision"])
+
+            # Send back annotated JPEG frame
+            ret, buffer = cv2.imencode(".jpg", annotated_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
+            if ret:
+                await websocket.send_bytes(buffer.tobytes())
+
+    except WebSocketDisconnect:
+        logger.info("Browser live camera WebSocket disconnected.")
+    except Exception as e:
+        logger.warning(f"WebSocket live camera error: {e}")
+
+@app.post("/api/detect-frame")
+async def detect_frame_http(request: Request):
+    """HTTP fallback for processing a single live camera frame."""
+    data = await request.body()
+    if not data:
+        raise HTTPException(status_code=400, detail="Empty frame body")
+    nparr = np.frombuffer(data, np.uint8)
+    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    if frame is None:
+        raise HTTPException(status_code=400, detail="Invalid frame format")
+
+    camera_stream.update_external_frame(frame)
+    tracks = tracker.track(frame)
+    incident = collision_detector.check_collisions(tracks, frame)
+    if incident:
+        telemetry_state["active_collision"] = True
+        telemetry_state["last_incident"] = incident
+        threading.Thread(
+            target=process_accident_incident,
+            args=(incident,),
+            daemon=True,
+            name=f"incident-{incident['incident_id']}"
+        ).start()
+
+    telemetry_state["active_vehicles"] = len(tracks)
+    telemetry_state["is_synthetic"] = False
+    annotated = draw_hud_overlays(frame, tracks, telemetry_state["active_collision"])
+    ret, buffer = cv2.imencode(".jpg", annotated, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
+    return StreamingResponse(io.BytesIO(buffer.tobytes()), media_type="image/jpeg")
 
 @app.get("/api/telemetry")
 def get_telemetry():

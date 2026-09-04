@@ -25,6 +25,7 @@ class CameraStream:
         self.fps = 0.0
         self._last_fps_time = time.time()
         self._frame_count = 0
+        self.last_external_frame_time = 0.0
         
         self.start()
 
@@ -142,6 +143,11 @@ class CameraStream:
     def _capture_loop(self):
         """Continuous frame reading loop."""
         while self.is_running:
+            # If an external source (browser live webcam) is currently streaming frames, yield loop
+            if time.time() - self.last_external_frame_time < 3.0:
+                time.sleep(0.02)
+                continue
+
             if not self.is_synthetic and self.cap and self.cap.isOpened():
                 ret, frame = self.cap.read()
                 if ret and frame is not None:
@@ -157,6 +163,19 @@ class CameraStream:
                 time.sleep(0.033)
 
             # Update FPS tracking
+            self._frame_count += 1
+            now = time.time()
+            if now - self._last_fps_time >= 1.0:
+                self.fps = round(self._frame_count / (now - self._last_fps_time), 1)
+                self._frame_count = 0
+                self._last_fps_time = now
+
+    def update_external_frame(self, frame: np.ndarray):
+        """Updates the current frame with a live camera frame from browser or client."""
+        with self.lock:
+            self.current_frame = frame
+            self.last_external_frame_time = time.time()
+            self.is_synthetic = False
             self._frame_count += 1
             now = time.time()
             if now - self._last_fps_time >= 1.0:
