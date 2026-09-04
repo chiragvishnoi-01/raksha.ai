@@ -341,6 +341,11 @@ async function startLiveCamera() {
 
         isLiveWebcamActive = true;
 
+        // Immediately show live webcam video on screen so user never sees black box
+        const streamImg = document.getElementById('live-stream-img');
+        video.style.display = 'block';
+        if (streamImg) streamImg.style.display = 'none';
+
         if (btnStart) {
             btnStart.textContent = '📹 CAMERA ACTIVE';
             btnStart.disabled = true;
@@ -407,8 +412,11 @@ function initWebcamWebSocket() {
         const blob = new Blob([event.data], { type: 'image/jpeg' });
         const imgUrl = URL.createObjectURL(blob);
         const streamImg = document.getElementById('live-stream-img');
+        const video = document.getElementById('client-webcam-video');
         if (streamImg && isLiveWebcamActive) {
             streamImg.src = imgUrl;
+            streamImg.style.display = 'block';
+            if (video) video.style.display = 'none';
             setTimeout(() => URL.revokeObjectURL(imgUrl), 800);
         }
     };
@@ -420,6 +428,12 @@ function initWebcamWebSocket() {
     webcamWs.onclose = () => {
         console.log('Webcam WebSocket disconnected.');
         if (isLiveWebcamActive) {
+            // Keep local video visible even if WebSocket reconnects
+            const video = document.getElementById('client-webcam-video');
+            const streamImg = document.getElementById('live-stream-img');
+            if (video) video.style.display = 'block';
+            if (streamImg) streamImg.style.display = 'none';
+
             updateCameraStatus("AI connection lost. Reconnecting...", "error");
             setTimeout(() => {
                 if (isLiveWebcamActive) initWebcamWebSocket();
@@ -427,6 +441,8 @@ function initWebcamWebSocket() {
         }
     };
 }
+
+let lastFrameSendTime = 0;
 
 function startFrameCaptureLoop() {
     if (streamIntervalId) clearInterval(streamIntervalId);
@@ -440,14 +456,20 @@ function startFrameCaptureLoop() {
 
     streamIntervalId = setInterval(() => {
         if (!isLiveWebcamActive || !webcamWs || webcamWs.readyState !== WebSocket.OPEN) return;
-        if (isAwaitingFrameResponse) return; // Prevent network queue lag
-        if (video.videoWidth === 0 || video.videoHeight === 0) return;
+
+        // Safety timeout: if server response is delayed more than 1200ms, unlock
+        if (isAwaitingFrameResponse && Date.now() - lastFrameSendTime > 1200) {
+            isAwaitingFrameResponse = false;
+        }
+        if (isAwaitingFrameResponse) return;
+        if (!video.videoWidth || !video.videoHeight) return;
 
         canvas.width = CAMERA_CONFIG.width;
         canvas.height = CAMERA_CONFIG.height;
         ctx.drawImage(video, 0, 0, CAMERA_CONFIG.width, CAMERA_CONFIG.height);
 
         isAwaitingFrameResponse = true;
+        lastFrameSendTime = Date.now();
         canvas.toBlob((blob) => {
             if (blob && webcamWs && webcamWs.readyState === WebSocket.OPEN) {
                 blob.arrayBuffer().then(buffer => {
@@ -506,7 +528,10 @@ function stopLiveCamera() {
 
     updateCameraStatus("Camera stopped. Switched back to simulation stream.", "info");
 
+    const video = document.getElementById('client-webcam-video');
+    if (video) video.style.display = 'none';
     if (streamImg) {
+        streamImg.style.display = 'block';
         streamImg.src = `/api/stream?t=${Date.now()}`;
     }
 }

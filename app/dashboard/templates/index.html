@@ -152,11 +152,12 @@
                 </div>
 
                 <div class="video-wrapper">
-                    <img id="live-stream-img" src="/api/stream" alt="Live Camera Feed with YOLO Telemetry">
-                    
-                    <!-- Hidden elements for client-side webcam streaming -->
-                    <video id="client-webcam-video" autoplay playsinline muted style="display: none;"></video>
-                    <canvas id="client-webcam-canvas" width="640" height="480" style="display: none;"></canvas>
+                    <!-- Client-side Live Webcam Element (shows instantly when camera starts) -->
+                    <video id="client-webcam-video" autoplay playsinline muted style="display: none; width: 100%; height: 100%; object-fit: cover;"></video>
+                    <!-- Server Stream / AI Annotated Feed Element -->
+                    <img id="live-stream-img" src="/api/stream" alt="Live Camera Feed with YOLO Telemetry" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                    <!-- Offscreen Canvas for Frame Extraction -->
+                    <canvas id="client-webcam-canvas" width="640" height="360" style="position: absolute; left: -9999px; top: -9999px;"></canvas>
 
                     <!-- HUD Overlays -->
                     <div class="video-hud-overlay">

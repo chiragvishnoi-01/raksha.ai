@@ -317,50 +317,54 @@ async def websocket_live_stream(websocket: WebSocket):
             if not data:
                 continue
 
-            nparr = np.frombuffer(data, np.uint8)
-            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-            if frame is None:
+            try:
+                nparr = np.frombuffer(data, np.uint8)
+                frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                if frame is None:
+                    continue
+
+                # Ingest frame into camera stream singleton
+                camera_stream.update_external_frame(frame)
+
+                # Run YOLO Tracking
+                tracks = tracker.track(frame)
+
+                # Check Collisions
+                incident = collision_detector.check_collisions(tracks, frame)
+                if incident:
+                    telemetry_state["active_collision"] = True
+                    telemetry_state["last_incident"] = incident
+                    threading.Thread(
+                        target=process_accident_incident,
+                        args=(incident,),
+                        daemon=True,
+                        name=f"incident-{incident['incident_id']}"
+                    ).start()
+
+                # FPS calculation
+                frame_counter += 1
+                now = time.time()
+                if now - fps_timer >= 1.0:
+                    current_fps = round(frame_counter / (now - fps_timer), 1)
+                    frame_counter = 0
+                    fps_timer = now
+
+                telemetry_state["fps"] = current_fps or 15.0
+                telemetry_state["active_vehicles"] = len(tracks)
+                telemetry_state["is_synthetic"] = False
+                telemetry_state["camera_source"] = "BROWSER WEBCAM"
+                telemetry_state["camera_online"] = True
+
+                # Draw HUD overlays on live camera frame
+                annotated_frame = draw_hud_overlays(frame, tracks, telemetry_state["active_collision"])
+
+                # Send back annotated JPEG frame
+                ret, buffer = cv2.imencode(".jpg", annotated_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
+                if ret:
+                    await websocket.send_bytes(buffer.tobytes())
+            except Exception as frame_err:
+                logger.warning(f"Error processing webcam frame: {frame_err}")
                 continue
-
-            # Ingest frame into camera stream singleton
-            camera_stream.update_external_frame(frame)
-
-            # Run YOLO Tracking
-            tracks = tracker.track(frame)
-
-            # Check Collisions
-            incident = collision_detector.check_collisions(tracks, frame)
-            if incident:
-                telemetry_state["active_collision"] = True
-                telemetry_state["last_incident"] = incident
-                threading.Thread(
-                    target=process_accident_incident,
-                    args=(incident,),
-                    daemon=True,
-                    name=f"incident-{incident['incident_id']}"
-                ).start()
-
-            # FPS calculation
-            frame_counter += 1
-            now = time.time()
-            if now - fps_timer >= 1.0:
-                current_fps = round(frame_counter / (now - fps_timer), 1)
-                frame_counter = 0
-                fps_timer = now
-
-            telemetry_state["fps"] = current_fps or 15.0
-            telemetry_state["active_vehicles"] = len(tracks)
-            telemetry_state["is_synthetic"] = False
-            telemetry_state["camera_source"] = "BROWSER WEBCAM"
-            telemetry_state["camera_online"] = True
-
-            # Draw HUD overlays on live camera frame
-            annotated_frame = draw_hud_overlays(frame, tracks, telemetry_state["active_collision"])
-
-            # Send back annotated JPEG frame
-            ret, buffer = cv2.imencode(".jpg", annotated_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
-            if ret:
-                await websocket.send_bytes(buffer.tobytes())
 
     except WebSocketDisconnect:
         logger.info("Browser live camera WebSocket disconnected.")
