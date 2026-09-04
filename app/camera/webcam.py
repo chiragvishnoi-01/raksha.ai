@@ -30,14 +30,18 @@ class CameraStream:
 
     def _init_capture(self) -> bool:
         """Initializes OpenCV video capture device."""
+        import platform
         try:
-            # On Windows, cv2.CAP_DSHOW often gives fast startup without delay
-            self.cap = cv2.VideoCapture(self.camera_index, cv2.CAP_DSHOW)
-            if not self.cap.isOpened():
-                # Fallback to default backend
+            if platform.system() == "Windows":
+                # On Windows, cv2.CAP_DSHOW often gives fast startup without delay
+                self.cap = cv2.VideoCapture(self.camera_index, cv2.CAP_DSHOW)
+                if not self.cap.isOpened():
+                    self.cap = cv2.VideoCapture(self.camera_index)
+            else:
+                # On Linux/Render servers, use default backend
                 self.cap = cv2.VideoCapture(self.camera_index)
                 
-            if self.cap.isOpened():
+            if self.cap and self.cap.isOpened():
                 self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
                 self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
                 self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
