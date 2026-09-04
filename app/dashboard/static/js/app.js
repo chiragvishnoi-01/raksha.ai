@@ -275,10 +275,10 @@ async function resetAlertState() {
 // ==========================================
 
 const CAMERA_CONFIG = {
-    width: 640,
-    height: 360,
-    targetFps: 10,
-    jpegQuality: 0.65
+    width: 480,
+    height: 270,
+    targetFps: 8,
+    jpegQuality: 0.60
 };
 
 let isLiveWebcamActive = false;
@@ -305,17 +305,19 @@ function updateCameraStatus(message, type = 'info') {
 // Display annotated frame from AI pipeline onto the video panel
 function displayAnnotatedFrame(blob) {
     const streamImg = document.getElementById('live-stream-img');
-    const video = document.getElementById('client-webcam-video');
     if (!streamImg) return;
 
-    const imgUrl = URL.createObjectURL(blob);
-    streamImg.src = imgUrl;
+    const newUrl = URL.createObjectURL(blob);
+    const oldUrl = streamImg.dataset.lastUrl;
+    streamImg.src = newUrl;
+    streamImg.dataset.lastUrl = newUrl;
     streamImg.style.display = 'block';
 
-    // Auto-cleanup blob URL to avoid memory leak
-    setTimeout(() => {
-        try { URL.revokeObjectURL(imgUrl); } catch(e) {}
-    }, 800);
+    if (oldUrl) {
+        setTimeout(() => {
+            try { URL.revokeObjectURL(oldUrl); } catch(e) {}
+        }, 1500);
+    }
 }
 
 // Start User Webcam on Button Click

@@ -146,9 +146,13 @@ def process_accident_incident(incident_data: Dict[str, Any]):
             nhai_alert_status=n_status,
             details=incident_data.get("severity_reason", "Automated collision detection via RAKSHA AI")
         )
-        db.add(db_incident)
-        db.commit()
-        logger.info(f"✅ Incident {incident_id} successfully recorded, dispatched, and archived.")
+        existing = db.query(Incident).filter(Incident.incident_id == incident_id).first()
+        if not existing:
+            db.add(db_incident)
+            db.commit()
+            logger.info(f"✅ Incident {incident_id} successfully recorded, dispatched, and archived.")
+        else:
+            logger.info(f"Incident {incident_id} already recorded in DB.")
     except Exception as e:
         logger.error(f"Step 4 (Database commit) failed for {incident_id}: {e}", exc_info=True)
     finally:
@@ -239,26 +243,10 @@ def generate_video_stream() -> Generator[bytes, None, None]:
             continue
 
         if not camera_stream.is_synthetic:
-            # Run ByteTrack Tracking & Detection on real camera frames
-            tracks = tracker.track(frame)
-            
-            # Check Collisions
-            incident = collision_detector.check_collisions(tracks, frame)
-            if incident:
-                telemetry_state["active_collision"] = True
-                telemetry_state["last_incident"] = incident
-                threading.Thread(
-                    target=process_accident_incident,
-                    args=(incident,),
-                    daemon=True,
-                    name=f"incident-{incident['incident_id']}"
-                ).start()
-
-            telemetry_state["fps"] = camera_stream.fps or 30.0
-            telemetry_state["active_vehicles"] = len(tracks)
-            telemetry_state["is_synthetic"] = False
-            is_colliding = telemetry_state["active_collision"]
-            annotated_frame = draw_hud_overlays(frame, tracks, is_colliding)
+            # In live webcam mode, /api/detect-frame and WebSocket already process frames with YOLO.
+            # Avoid running duplicate inference in MJPEG stream to conserve CPU on Render.
+            annotated_frame = frame
+            time.sleep(0.04)
         else:
             # Synthetic simulation mode: serve lightweight simulated road frames without pegging CPU
             telemetry_state["fps"] = camera_stream.fps or 30.0

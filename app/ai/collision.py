@@ -177,9 +177,10 @@ class CollisionDetector:
                             mean_conf=mean_conf
                         )
 
-                        # Generate unique Incident ID: e.g. RAKSHA-2026-001
+                        # Generate unique Incident ID: e.g. RAKSHA-2026-4821-001
                         year = datetime.now().year
-                        incident_id = f"RAKSHA-{year}-{self.incident_count:03d}"
+                        ts_suffix = f"{int(time.time()) % 10000:04d}-{self.incident_count:03d}"
+                        incident_id = f"RAKSHA-{year}-{ts_suffix}"
                         
                         # Save Screenshot evidence
                         annotated_frame = self._annotate_collision_frame(frame, v1, v2, sev_info["severity"], incident_id)

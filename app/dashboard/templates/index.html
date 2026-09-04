@@ -152,22 +152,22 @@
                 </div>
 
                 <div class="video-wrapper">
-                    <!-- Client-side Live Webcam Element (shows instantly on page load) -->
-                    <video id="client-webcam-video" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; display: block;"></video>
+                    <!-- Client-side Live Webcam Element -->
+                    <video id="client-webcam-video" autoplay playsinline muted style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: none; z-index: 1;"></video>
                     <!-- Server Stream / AI Annotated Feed Element (overlays on top of video) -->
-                    <img id="live-stream-img" src="/api/stream" alt="Live Camera Feed with YOLO Telemetry" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: none; z-index: 2;">
+                    <img id="live-stream-img" src="/api/stream" alt="Live Camera Feed with YOLO Telemetry" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block; z-index: 2;">
                     <!-- Offscreen Canvas for Frame Extraction -->
-                    <canvas id="client-webcam-canvas" width="640" height="360" style="position: absolute; left: -9999px; top: -9999px;"></canvas>
+                    <canvas id="client-webcam-canvas" width="480" height="270" style="position: absolute; left: -9999px; top: -9999px;"></canvas>
 
                     <!-- HUD Overlays -->
-                    <div class="video-hud-overlay">
+                    <div class="video-hud-overlay" style="z-index: 10; pointer-events: none;">
                         <div class="hud-corner top-left">
                             <span>LOC: KANPUR CORRIDOR [NH-27]</span>
                             <span>LAT: 26.4499° N | LON: 80.3319° E</span>
                         </div>
                         <div class="hud-corner top-right">
                             <span class="metric-tag" style="background: rgba(0,242,254,0.15); color: #00f2fe; border: 1px solid rgba(0,242,254,0.4); margin-bottom: 4px; display: inline-block;">
-                                Camera Source: <strong id="cam-feed-source">AUTOMATIC LIVE WEBCAM</strong>
+                                Camera Source: <strong id="cam-feed-source">SIMULATION</strong>
                             </span>
                             <span id="collision-hud-status" class="hud-status-badge">STATUS: NORMAL</span>
                         </div>
