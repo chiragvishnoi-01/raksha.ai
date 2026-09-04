@@ -165,7 +165,9 @@
                             <span>LAT: 26.4499° N | LON: 80.3319° E</span>
                         </div>
                         <div class="hud-corner top-right">
-                            <span id="cam-feed-source" class="metric-tag" style="background: rgba(0,242,254,0.15); color: #00f2fe; border: 1px solid rgba(0,242,254,0.4); margin-bottom: 4px; display: inline-block;">FEED: SIMULATION</span>
+                            <span class="metric-tag" style="background: rgba(0,242,254,0.15); color: #00f2fe; border: 1px solid rgba(0,242,254,0.4); margin-bottom: 4px; display: inline-block;">
+                                Camera Source: <strong id="cam-feed-source">SIMULATION</strong>
+                            </span>
                             <span id="collision-hud-status" class="hud-status-badge">STATUS: NORMAL</span>
                         </div>
                         <div class="hud-corner bottom-left">
@@ -176,11 +178,14 @@
 
                 <div class="video-controls-bar">
                     <div class="control-buttons">
-                        <button id="btn-webcam-toggle" class="btn btn-primary" onclick="toggleLiveWebcam()" style="font-weight: 700; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); color: #000; box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);">
-                            📹 Start Live Device Camera
+                        <button id="btn-start-camera" class="btn btn-primary" onclick="startLiveCamera()" style="font-weight: 700; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); color: #000; box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);">
+                            📹 START CAMERA
+                        </button>
+                        <button id="btn-stop-camera" class="btn btn-secondary" onclick="stopLiveCamera()" style="font-weight: 600; opacity: 0.5;" disabled>
+                            🛑 STOP CAMERA
                         </button>
                         <button class="btn btn-secondary" onclick="useSimulationFeed()">
-                            🤖 Simulation Feed
+                            🤖 SIMULATION FEED
                         </button>
                         <button class="btn btn-warning" onclick="triggerSimulatedCollision()">
                             💥 Trigger Simulated Collision
@@ -189,8 +194,8 @@
                             ✓ Reset Alert Status
                         </button>
                     </div>
-                    <div id="webcam-status-note" class="control-note">
-                        <em>💡 Click <strong>"Start Live Device Camera"</strong> to activate your laptop/mobile webcam for real-time live YOLO detection!</em>
+                    <div id="camera-status-msg" class="control-note" style="margin-top: 10px; padding: 10px 14px; border-radius: 6px; font-size: 0.88rem; background: rgba(0, 242, 254, 0.08); border: 1px solid rgba(0, 242, 254, 0.25); color: #cbd5e1;">
+                        💡 Click <strong>"START CAMERA"</strong> to activate your laptop/device webcam for real-time live YOLO detection!
                     </div>
                 </div>
             </section>

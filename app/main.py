@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Generator, Optional, Dict, Any, List
 
 from fastapi import FastAPI, Depends, Request, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -42,6 +43,15 @@ app = FastAPI(
     description="Intelligent road accident detection, tracking, severity analysis and multi-agency emergency response system."
 )
 
+# CORS configuration for local development and Render production
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Directories
 STATIC_DIR = Path(__file__).resolve().parent / "dashboard" / "static"
 TEMPLATES_DIR = Path(__file__).resolve().parent / "dashboard" / "templates"
@@ -61,7 +71,8 @@ telemetry_state = {
     "active_collision": False,
     "last_incident": None,
     "camera_online": True,
-    "is_synthetic": False
+    "is_synthetic": True,
+    "camera_source": "SIMULATION"
 }
 
 def process_accident_incident(incident_data: Dict[str, Any]):
@@ -340,6 +351,8 @@ async def websocket_live_stream(websocket: WebSocket):
             telemetry_state["fps"] = current_fps or 15.0
             telemetry_state["active_vehicles"] = len(tracks)
             telemetry_state["is_synthetic"] = False
+            telemetry_state["camera_source"] = "BROWSER WEBCAM"
+            telemetry_state["camera_online"] = True
 
             # Draw HUD overlays on live camera frame
             annotated_frame = draw_hud_overlays(frame, tracks, telemetry_state["active_collision"])
@@ -353,6 +366,9 @@ async def websocket_live_stream(websocket: WebSocket):
         logger.info("Browser live camera WebSocket disconnected.")
     except Exception as e:
         logger.warning(f"WebSocket live camera error: {e}")
+    finally:
+        telemetry_state["camera_source"] = "SIMULATION"
+        telemetry_state["is_synthetic"] = True
 
 @app.post("/api/detect-frame")
 async def detect_frame_http(request: Request):
