@@ -31,6 +31,17 @@ class CameraStream:
     def _init_capture(self) -> bool:
         """Initializes OpenCV video capture device."""
         import platform
+        
+        # On headless Linux servers (Render, etc.), skip webcam entirely
+        # and go straight to synthetic mode — no /dev/video* devices exist
+        if platform.system() != "Windows":
+            import os
+            video_devices = [f for f in os.listdir('/dev') if f.startswith('video')] if os.path.exists('/dev') else []
+            if not video_devices:
+                logger.info("No video devices found (headless server). Using synthetic simulation mode.")
+                self.is_synthetic = True
+                return True
+        
         try:
             if platform.system() == "Windows":
                 # On Windows, cv2.CAP_DSHOW often gives fast startup without delay
@@ -38,7 +49,6 @@ class CameraStream:
                 if not self.cap.isOpened():
                     self.cap = cv2.VideoCapture(self.camera_index)
             else:
-                # On Linux/Render servers, use default backend
                 self.cap = cv2.VideoCapture(self.camera_index)
                 
             if self.cap and self.cap.isOpened():
